@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -8,6 +9,14 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Models
@@ -28,9 +37,13 @@ const (
 )
 
 func main() {
+	ctx := context.Background()
+
+	tracer := initTracer(ctx, serverName)
+
 	// Set up HTTP routes
-	http.HandleFunc("/orders/{id}", handleOrders)
-	http.HandleFunc("/health", handleHealth)
+	http.HandleFunc("/orders/{id}", func(w http.ResponseWriter, r *http.Request) { handleOrders(w, r, tracer) })
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) { handleHealth(w, r, tracer) })
 
 	// Start server
 	port := os.Getenv("PORT")
@@ -41,14 +54,20 @@ func main() {
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
-func handleHealth(w http.ResponseWriter, r *http.Request) {
+func handleHealth(w http.ResponseWriter, r *http.Request, tracer trace.Tracer) {
+	_, span := tracer.Start(r.Context(), "/health")
+	defer span.End()
+
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Server-Name", serverName)
 	json.NewEncoder(w).Encode(map[string]bool{"status": true})
 }
 
 // Order handlers
-func handleOrders(w http.ResponseWriter, r *http.Request) {
+func handleOrders(w http.ResponseWriter, r *http.Request, tracer trace.Tracer) {
+	ctx, span := tracer.Start(r.Context(), "/orders")
+	defer span.End()
+
 	w.Header().Set("X-Server-Name", serverName)
 
 	switch r.Method {
@@ -59,7 +78,7 @@ func handleOrders(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				http.Error(w, "Bad ID", http.StatusBadRequest)
 			} else {
-				err = getOrderByID(w, ID)
+				err = getOrderByID(ctx, w, ID)
 
 				if err != nil {
 					http.Error(w, "Internal error", http.StatusInternalServerError)
@@ -73,7 +92,7 @@ func handleOrders(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getOrderByID(w http.ResponseWriter, ID int) error {
+func getOrderByID(ctx context.Context, w http.ResponseWriter, ID int) error {
 	modelsServiceBaseURL := os.Getenv("MODELS_SERVICE_BASE_URL")
 	if modelsServiceBaseURL == "" {
 		modelsServiceBaseURL = "http://models-service:8080"
@@ -85,7 +104,7 @@ func getOrderByID(w http.ResponseWriter, ID int) error {
 		Status:  "FILE_UPLOADED",
 	}
 
-	m, err := getModelByID(modelsServiceBaseURL, o.ModelID)
+	m, err := getModelByID(ctx, modelsServiceBaseURL, o.ModelID)
 
 	if err != nil {
 		return err
@@ -99,14 +118,23 @@ func getOrderByID(w http.ResponseWriter, ID int) error {
 	return nil
 }
 
-func getModelByID(baseURL string, modelID int) (*Model, error) {
+func getModelByID(ctx context.Context, baseURL string, modelID int) (*Model, error) {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 
 	url := fmt.Sprintf("%s/models/%d", baseURL, modelID)
 
-	resp, err := client.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed GET request to %s: %w", url, err)
+	}
+
+	propagator := propagation.TraceContext{}
+
+	propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching model data: %w", err)
 	}
@@ -122,4 +150,24 @@ func getModelByID(baseURL string, modelID int) (*Model, error) {
 	}
 
 	return &model, nil
+}
+
+func initTracer(ctx context.Context, service string) trace.Tracer {
+	client := otlptracegrpc.NewClient(
+		otlptracegrpc.WithInsecure(),
+	)
+	exporter, err := otlptrace.New(ctx, client)
+	if err != nil {
+		log.Fatal("creating OTLP trace exporter: %w", err)
+	}
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceName(service),
+		)),
+	)
+
+	return tp.Tracer(service)
 }

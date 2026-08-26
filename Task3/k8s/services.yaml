@@ -12,14 +12,17 @@ spec:
       labels:
         app: orders-service
     spec:
-      imagePullSecrets:
-        - name: dockerconfigjson
       containers:
         - name: orders-service
-          image: ghcr.io/el-76/architect-alexandrite/orders-service:latest
+          image: orders-service:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://simplest-collector:4317
+            - name: OTEL_EXPORTER_OTLP_INSECURE
+              value: "true"
 ---
 apiVersion: v1
 kind: Service
@@ -47,14 +50,17 @@ spec:
       labels:
         app: models-service
     spec:
-      imagePullSecrets:
-        - name: dockerconfigjson
       containers:
         - name: models-service
-          image: ghcr.io/el-76/architect-alexandrite/models-service:latest
+          image: models-service:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://simplest-collector:4317
+            - name: OTEL_EXPORTER_OTLP_INSECURE
+              value: "true"
 ---
 apiVersion: v1
 kind: Service

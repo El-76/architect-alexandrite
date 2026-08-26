@@ -25,16 +25,21 @@ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/
 
 ### 3. Развертывание Jaeger
 ```bash
-kubectl create namespace observability
-kubectl create -f https://github.com/jaegertracing/jaeger-operator/releases/download/v1.51.0/jaeger-operator.yaml -n observability
-kubectl apply -f k8s/jaeger-instance.yaml
+minikube kubectl -- create namespace observability
+
+curl -L https://github.com/jaegertracing/jaeger-operator/releases/download/v1.51.0/jaeger-operator.yaml -o k8s/jaeger-operator.yaml
+
+sed -i 's/gcr\.io\/kubebuilder\/kube-rbac-proxy/registry.k8s.io\/kubebuilder\/kube-rbac-proxy/g' k8s/jaeger-operator.yaml
+
+minikube kubectl -- create -f k8s/jaeger-operator.yaml -n observability
+minikube kubectl -- apply -f k8s/jaeger-instance.yaml
 ```
 
 ### 4. Сборка и деплой сервисов
 ```bash
 # Сборка образов
-minikube image build -t service-a:latest services/service-a/
-minikube image build -t service-b:latest services/service-b/
+minikube image build -t orders-service:latest services/orders-service/
+minikube image build -t models-service:latest services/models-service/
 
 # Развертывание
 kubectl apply -f k8s/services.yaml
@@ -44,7 +49,7 @@ kubectl apply -f k8s/services.yaml
 
 ### Доступ к Jaeger UI
 ```bash
-kubectl port-forward svc/simplest-query 16686:16686
+minikube kubectl -- port-forward --address 0.0.0.0 svc/simplest-query 16686:16686
 ```
 Откройте в браузере: http://localhost:16686
 
