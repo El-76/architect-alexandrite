@@ -12,9 +12,11 @@ spec:
       labels:
         app: orders-service
     spec:
+      imagePullSecrets:
+        - name: dockerconfigjson
       containers:
         - name: orders-service
-          image: ghcr.io/el-76/architect-cinemaabyss/orders-service:latest
+          image: ghcr.io/el-76/architect-alexandrite/orders-service:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -45,9 +47,11 @@ spec:
       labels:
         app: models-service
     spec:
+      imagePullSecrets:
+        - name: dockerconfigjson
       containers:
         - name: models-service
-          image: ghcr.io/el-76/architect-cinemaabyss/models-service:latest
+          image: ghcr.io/el-76/architect-alexandrite/models-service:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
