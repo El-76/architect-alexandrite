@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orders-service
+  template:
+    metadata:
+      labels:
+        app: orders-service
+    spec:
+      containers:
+        - name: orders-service
+          image: ghcr.io/el-76/architect-cinemaabyss/orders-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orders-service
+spec:
+  selector:
+    app: orders-service
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: models-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: models-service
+  template:
+    metadata:
+      labels:
+        app: models-service
+    spec:
+      containers:
+        - name: models-service
+          image: ghcr.io/el-76/architect-cinemaabyss/models-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: models-service
+spec:
+  selector:
+    app: models-service
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+
