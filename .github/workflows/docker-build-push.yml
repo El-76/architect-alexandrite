@@ -51,7 +51,7 @@ jobs:
       - name: Build and push Orders Service Docker image
         uses: docker/build-push-action@v4
         with:
-          context: ./Task3/services/orders
+          context: ./Task3/services/orders-service
           push: true
           tags: ${{ steps.meta-orders.outputs.tags }}
           labels: ${{ steps.meta-orders.outputs.labels }}
@@ -73,7 +73,7 @@ jobs:
       - name: Build and push Models Service Docker image
         uses: docker/build-push-action@v4
         with:
-          context: ./Task3/services/models
+          context: ./Task3/services/models-service
           push: true
           tags: ${{ steps.meta-models.outputs.tags }}
           labels: ${{ steps.meta-models.outputs.labels }}
