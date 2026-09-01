@@ -5,6 +5,8 @@
 1. Взаимодействуют между собой
 2. Отправляют трейсы в Jaeger
 
+Вместо изначальных service-a и service-b сделаны orders-service (сервис заказов) и models (сервис 3D-моделей), в каждом по одной GET-ручке, которая получает соответствующую сущность по ID, orders-service идёт за данными модели в models-service в коде ручки.
+
 ## Требования
 - Minikube
 - kubectl
@@ -20,7 +22,7 @@ Ingress нужен для вызовов
 
 ### 2. Установка cert-manager
 ```bash
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.3/cert-manager.yaml
+minikube kubectl -- apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.3/cert-manager.yaml
 ```
 
 ### 3. Развертывание Jaeger
@@ -42,7 +44,7 @@ minikube image build -t orders-service:latest services/orders-service/
 minikube image build -t models-service:latest services/models-service/
 
 # Развертывание
-kubectl apply -f k8s/services.yaml
+minikube kubectl -- apply -f k8s/services.yaml
 ```
 
 ## Проверка работы
@@ -55,12 +57,14 @@ minikube kubectl -- port-forward --address 0.0.0.0 svc/simplest-query 16686:1668
 
 ### Тестирование сервисов
 ```bash
-# Вызов service-a, который вызывает service-b
+# Вызов orders-service, который вызывает models-service
+
+
 kubectl exec -it $(kubectl get pods -l app=service-a -o jsonpath='{.items[0].metadata.name}') -- wget -qO- http://service-a:8080
 ```
 
 ## Структура проекта
-- `services/service-a/` - Исходный код service-a
-- `services/service-b/` - Исходный код service-b  
+- `services/orders=service/` - Исходный код orders-service
+- `services/orders-service/` - Исходный код orders-service  
 - `k8s/services.yaml` - Конфигурация Kubernetes для сервисов
-- `jaeger-instance.yaml` - Конфигурация Jaeger
+- `k8s/jaeger-instance.yaml` - Конфигурация Jaeger
