@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orders-service
+  template:
+    metadata:
+      labels:
+        app: orders-service
+    spec:
+      containers:
+        - name: orders-service
+          image: orders-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://simplest-collector:4317
+            - name: OTEL_EXPORTER_OTLP_INSECURE
+              value: "true"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orders-service
+spec:
+  selector:
+    app: orders-service
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: models-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: models-service
+  template:
+    metadata:
+      labels:
+        app: models-service
+    spec:
+      containers:
+        - name: models-service
+          image: models-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://simplest-collector:4317
+            - name: OTEL_EXPORTER_OTLP_INSECURE
+              value: "true"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: models-service
+spec:
+  selector:
+    app: models-service
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+

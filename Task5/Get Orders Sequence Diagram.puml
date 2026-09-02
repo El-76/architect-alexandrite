@@ -1,0 +1,17 @@
+@startuml MES Caching Sequence Diagram Get Orders
+
+!include <C4/C4_Sequence>
+
+title Получение списка заказов для операторов
+
+boundary "MES Client" as client
+boundary "MES API" as service
+boundary "MES Cache" as cache
+boundary "MES DB" as storage
+
+client -> service: Pending orders list request
+service -> cache: Pending orders list request
+cache -> service: Pending orders
+service -> client: Pending orders
+
+@enduml

@@ -1,0 +1,21 @@
+@startuml MES Caching Sequence Diagram Manufacture Started
+
+!include <C4/C4_Sequence>
+
+title Начало работы над заказом
+
+boundary "MES Client" as client
+boundary "MES API" as service
+boundary "MES Cache" as cache
+boundary "MES DB" as storage
+
+client -> service: Move order to MANUFACTURING_STARTED
+service -> storage: Change order status
+alt Status successfully changed
+    service -> cache: Remove order from pending orders cache
+    service -> client: Success
+else Status change error
+    service -> client: Order taken
+end
+
+@enduml
