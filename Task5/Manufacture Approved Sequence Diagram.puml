@@ -1,0 +1,16 @@
+@startuml MES Caching Sequence Diagram Manufacture Approved
+
+!include <C4/C4_Sequence>
+
+title Одобрение заказов
+
+boundary "MES Client" as client
+boundary "MES API" as service
+boundary "MES Cache" as cache
+boundary "MES DB" as storage
+
+client -> service: Move order to MANUFACTURING_APPROVED
+service -> storage: Change order status
+service -> cache: Add order to pending orders cache
+
+@enduml
