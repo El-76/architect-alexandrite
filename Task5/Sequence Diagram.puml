@@ -1,0 +1,30 @@
+@startuml MES Caching Sequence Diagram
+
+!include <C4/C4_Sequence>
+
+title Диаграмма последовательности: Кеш Write-Through между сервисом MES и хранилищем MES
+
+boundary "MES Client" as client
+boundary "MES API" as service
+boundary "MES Cache" as cache
+boundary "MES DB" as storage
+
+client -> service: Move order to MANUFACTURING_APPROVED
+service -> storage: Change order status
+service -> cache: Add order to pending orders cache
+
+client -> service: Move order to MANUFACTURING_STARTED
+service -> storage: Change order status
+alt Status successfully changed
+    service -> cache: Remove order from pending orders cache
+    service -> client: Success
+else Status change error
+    service -> client: Order taken
+end
+
+client -> service: Pending orders list request
+service -> cache: Pending orders list request
+cache -> service: Pending orders
+service -> client: Pending orders
+
+@enduml

@@ -5,7 +5,7 @@
 1. Взаимодействуют между собой
 2. Отправляют трейсы в Jaeger
 
-Вместо изначальных service-a и service-b сделаны orders-service (сервис заказов) и models (сервис 3D-моделей), в каждом по одной GET-ручке, которая получает соответствующую сущность по ID, orders-service идёт за данными модели в models-service в коде ручки.
+Вместо изначальных service-a и service-b сделаны orders-service (сервис заказов) и models (сервис 3D-моделей), в каждом по одной GET-ручке, которая получает соответствующую сущность по ID, orders-service идёт за данными модели в models-service в коде ручки. Ручка в models-service с вероятностью 0,5 может "тормозить" - выполняться 1 секунду.
 
 ## Требования
 - Minikube
@@ -34,6 +34,9 @@ curl -L https://github.com/jaegertracing/jaeger-operator/releases/download/v1.51
 sed -i 's/gcr\.io\/kubebuilder\/kube-rbac-proxy/registry.k8s.io\/kubebuilder\/kube-rbac-proxy/g' k8s/jaeger-operator.yaml
 
 minikube kubectl -- create -f k8s/jaeger-operator.yaml -n observability
+
+# Надо дождаться, когда поды запустятся
+
 minikube kubectl -- apply -f k8s/jaeger-instance.yaml
 ```
 
@@ -58,10 +61,22 @@ minikube kubectl -- port-forward --address 0.0.0.0 svc/simplest-query 16686:1668
 ### Тестирование сервисов
 ```bash
 # Вызов orders-service, который вызывает models-service
-
-
-kubectl exec -it $(kubectl get pods -l app=service-a -o jsonpath='{.items[0].metadata.name}') -- wget -qO- http://service-a:8080
+minikube kubectl -- exec -it $( minikube kubectl -- get pods -l app=orders-service -o jsonpath='{.items[0].metadata.name}' ) -- wget http://orders-service:8080/orders/123456 -O -
 ```
+
+### Трейсы
+
+#### Список
+
+![Список](./screenshots/Traces%20list.png)
+
+#### Models отвечает медленно
+
+![Slow Models](./screenshots/Slow%20models%20service%20trace.png)
+
+#### Models отвечает быстро
+
+![Fast Models](./screenshots/Fast%20models%20service%20trace.png)
 
 ## Структура проекта
 - `services/orders=service/` - Исходный код orders-service
